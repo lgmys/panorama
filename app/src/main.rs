@@ -1,10 +1,11 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use axum::{
     extract::{ConnectInfo, State},
     routing::get,
     Router,
 };
+use futures::stream::{self, StreamExt};
 use hyper::{body::Incoming, Request};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -27,39 +28,62 @@ struct RequestMessage {
 
 #[derive(Clone)]
 struct AppState {
-    pub tx: mpsc::Sender<RequestMessage>,
+    pub tx: HashMap<String, mpsc::Sender<RequestMessage>>,
+}
+
+struct Plugin {
+    pub socket_path: String,
+    pub executable_path: String,
+    pub id: String,
 }
 
 #[tokio::main]
 async fn main() {
-    let (tx, mut rx) = mpsc::channel(32);
+    let mut tx_map = HashMap::<String, mpsc::Sender<RequestMessage>>::new();
+    let mut rx_map = HashMap::<String, Arc<Mutex<mpsc::Receiver<RequestMessage>>>>::new();
+
+    let mut plugin_listeners: Vec<UnixListener> = Vec::new();
+
+    let plugins: Vec<Plugin> = vec![Plugin {
+        socket_path: "/tmp/rust-unix-socket-example.sock".to_string(),
+        id: "discover".to_string(),
+        executable_path: "target/debug/discover".to_string(),
+    }];
+
+    for plugin in &plugins {
+        let (tx, rx) = mpsc::channel(32);
+        tx_map.insert(plugin.id.clone(), tx);
+        rx_map.insert(plugin.id.clone(), Arc::new(Mutex::new(rx)));
+
+        if fs::metadata(&plugin.socket_path).await.is_ok() {
+            fs::remove_file(&plugin.socket_path).await.unwrap();
+        }
+
+        // Create a Unix listener for the plugin
+        let plugin_listener = UnixListener::bind(&plugin.socket_path).unwrap();
+        println!("Socket created and listening at {}", &plugin.socket_path);
+
+        plugin_listeners.push(plugin_listener);
+
+        // Spawn the child process
+        Command::new(&plugin.executable_path)
+            .arg(&plugin.socket_path)
+            .spawn()
+            .expect("Failed to spawn child process");
+    }
 
     let app = Router::new()
         .route("/", get(root))
-        .with_state(AppState { tx });
-
-    let shared_rx = Arc::new(Mutex::new(rx));
+        .with_state(AppState { tx: tx_map });
 
     let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
     let external_listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
 
-    let socket_path = "/tmp/rust-unix-socket-example.sock";
-    let child_process_executable = "target/debug/discover";
-
-    // Clean up any existing socket file
-    if fs::metadata(socket_path).await.is_ok() {
-        fs::remove_file(socket_path).await.unwrap();
-    }
-
-    // Create a Unix listener for the plugin
-    let plugin_listener = UnixListener::bind(socket_path).unwrap();
-    println!("Socket created and listening at {}", socket_path);
-
-    // Spawn the child process
-    Command::new(child_process_executable)
-        .arg(socket_path)
-        .spawn()
-        .expect("Failed to spawn child process");
+    let mut plugin_listener_stream = stream::select_all(
+        plugin_listeners
+            .into_iter()
+            .map(|listener| tokio_stream::wrappers::UnixListenerStream::new(listener)),
+    );
 
     loop {
         tokio::select! {
@@ -82,8 +106,10 @@ async fn main() {
                     }
                 });
         }
-        Ok((mut plugin_socket, _)) = plugin_listener.accept() => {
-            let shared_rx = shared_rx.clone();
+        Some(Ok(mut plugin_socket)) = plugin_listener_stream.next() => {
+            // NOTE: this will be called only once per plugin
+            let shared_rx = rx_map.get("discover").unwrap().clone();
+
             // NOTE: spawn plugin internal socket listener
             tokio::spawn(async move {
                 while let Some(request) = shared_rx.lock().await.recv().await {
@@ -121,7 +147,7 @@ async fn root(
         response_tx,
     };
 
-    if let Err(_) = state.tx.send(request).await {
+    if let Err(_) = state.tx.get("discover").unwrap().send(request).await {
         dbg!("Failed to send message");
     } else {
         // Wait for the response
