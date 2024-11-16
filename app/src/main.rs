@@ -44,11 +44,18 @@ async fn main() {
 
     let mut plugin_listeners: Vec<UnixListener> = Vec::new();
 
-    let plugins: Vec<Plugin> = vec![Plugin {
-        socket_path: "/tmp/rust-unix-socket-example.sock".to_string(),
-        id: "discover".to_string(),
-        executable_path: "target/debug/discover".to_string(),
-    }];
+    let plugins: Vec<Plugin> = vec![
+        Plugin {
+            socket_path: "/tmp/panorama-discover.sock".to_string(),
+            id: "discover".to_string(),
+            executable_path: "target/debug/discover".to_string(),
+        },
+        Plugin {
+            socket_path: "/tmp/panorama-discover2.sock".to_string(),
+            id: "discover2".to_string(),
+            executable_path: "target/debug/discover".to_string(),
+        },
+    ];
 
     for plugin in &plugins {
         let (tx, rx) = mpsc::channel(32);
