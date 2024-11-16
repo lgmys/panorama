@@ -18,6 +18,7 @@ use tokio::{
     process::Command,
     sync::{mpsc, oneshot, Mutex},
 };
+use tokio_stream::wrappers::UnixListenerStream;
 use tower::{Service, ServiceExt};
 
 #[derive(Debug)]
@@ -42,7 +43,7 @@ async fn main() {
     let mut tx_map = HashMap::<String, mpsc::Sender<RequestMessage>>::new();
     let mut rx_map = HashMap::<String, Arc<Mutex<mpsc::Receiver<RequestMessage>>>>::new();
 
-    let mut plugin_listeners: Vec<UnixListener> = Vec::new();
+    let mut plugin_listeners: Vec<(String, UnixListener)> = Vec::new();
 
     let plugins: Vec<Plugin> = vec![
         Plugin {
@@ -70,7 +71,7 @@ async fn main() {
         let plugin_listener = UnixListener::bind(&plugin.socket_path).unwrap();
         println!("Socket created and listening at {}", &plugin.socket_path);
 
-        plugin_listeners.push(plugin_listener);
+        plugin_listeners.push((plugin.id.clone(), plugin_listener));
 
         // Spawn the child process
         Command::new(&plugin.executable_path)
@@ -86,11 +87,10 @@ async fn main() {
     let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
     let external_listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
 
-    let mut plugin_listener_stream = stream::select_all(
-        plugin_listeners
-            .into_iter()
-            .map(|listener| tokio_stream::wrappers::UnixListenerStream::new(listener)),
-    );
+    let mut plugin_listener_stream =
+        stream::select_all(plugin_listeners.into_iter().map(|(plugin_id, listener)| {
+            UnixListenerStream::new(listener).map(move |connection| (plugin_id.clone(), connection))
+        }));
 
     loop {
         tokio::select! {
@@ -113,22 +113,24 @@ async fn main() {
                     }
                 });
         }
-        Some(Ok(mut plugin_socket)) = plugin_listener_stream.next() => {
+        Some((plugin_id, Ok(mut plugin_socket))) = plugin_listener_stream.next() => {
+            let plugin_id = plugin_id.clone();
             // NOTE: this will be called only once per plugin
-            let shared_rx = rx_map.get("discover").unwrap().clone();
+            let plugin_rx = rx_map.get(&plugin_id).unwrap().clone();
 
             // NOTE: spawn plugin internal socket listener
             tokio::spawn(async move {
-                while let Some(request) = shared_rx.lock().await.recv().await {
+                while let Some(request) = plugin_rx.lock().await.recv().await {
                     let message = request.text;
                     plugin_socket.write_all(message.as_bytes()).await.unwrap();
-                    println!("Sent to child: {}", &message);
+                    println!("Sent to {}: {}", &plugin_id, &message);
 
                     let mut buf = vec![0; 1024];
                     let n = plugin_socket.read(&mut buf).await.unwrap();
                     let response = String::from_utf8_lossy(&buf[..n]);
 
-                    // Send the response back
+                    println!("Relaying response from {}: {}", &plugin_id, &response);
+
                     if let Err(e) = request.response_tx.send(response.to_string()) {
                         eprintln!("Failed to send response: {}", e);
                     }
