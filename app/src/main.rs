@@ -125,6 +125,13 @@ async fn main() {
                     plugin_socket.write_all(message.as_bytes()).await.unwrap();
                     println!("Sent to {}: {}", &plugin_id, &message);
 
+                    // TODO: handle requests from the plugins here. it should also support talking
+                    // to other plugins as well. Eg, it should be possible to pull something from
+                    // other plugin here - just like in the root handler
+
+
+                    /// test end
+
                     let mut buf = vec![0; 1024];
                     let n = plugin_socket.read(&mut buf).await.unwrap();
                     let response = String::from_utf8_lossy(&buf[..n]);
@@ -144,7 +151,6 @@ async fn root(
     ConnectInfo(info): ConnectInfo<SocketAddr>,
     State(state): State<AppState>,
 ) -> &'static str {
-    // TODO: send something to all plugins
     dbg!(info);
 
     // Create a oneshot channel for the response
