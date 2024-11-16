@@ -29,7 +29,7 @@ struct RequestMessage {
 
 #[derive(Clone)]
 struct AppState {
-    pub tx: HashMap<String, mpsc::Sender<RequestMessage>>,
+    pub tx: Arc<HashMap<String, mpsc::Sender<RequestMessage>>>,
 }
 
 struct Plugin {
@@ -80,9 +80,11 @@ async fn main() {
             .expect("Failed to spawn child process");
     }
 
+    let tx_map = Arc::new(tx_map);
+
     let app = Router::new()
         .route("/", get(root))
-        .with_state(AppState { tx: tx_map });
+        .with_state(AppState { tx: tx_map.clone() });
 
     let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
     let external_listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
@@ -118,6 +120,8 @@ async fn main() {
             // NOTE: this will be called only once per plugin
             let plugin_rx = rx_map.get(&plugin_id).unwrap().clone();
 
+            let tx_map = tx_map.clone();
+
             // NOTE: spawn plugin internal socket listener
             tokio::spawn(async move {
                 while let Some(request) = plugin_rx.lock().await.recv().await {
@@ -125,12 +129,28 @@ async fn main() {
                     plugin_socket.write_all(message.as_bytes()).await.unwrap();
                     println!("Sent to {}: {}", &plugin_id, &message);
 
-                    // TODO: handle requests from the plugins here. it should also support talking
-                    // to other plugins as well. Eg, it should be possible to pull something from
-                    // other plugin here - just like in the root handler
+                    // TODO: make it a function
+                    let (response_tx, response_rx) = oneshot::channel();
+                    // Send the request message
+                    let request2 = RequestMessage {
+                        text: "ha 2".to_string(),
+                        response_tx,
+                    };
 
-
-                    /// test end
+                    // NOTE: its important to check if the plugin is not trying to call a method on
+                    // itself
+                    if plugin_id != "discover2" {
+                        if let Err(_) = tx_map.get("discover2").unwrap().send(request2).await {
+                            dbg!("Failed to send message");
+                        } else {
+                            // Wait for the response
+                            match response_rx.await {
+                                Ok(response) => dbg!(response),
+                                Err(_) => dbg!("Failed to receive response".to_string()),
+                            };
+                        }
+                    }
+                    // TODO: end make it a function
 
                     let mut buf = vec![0; 1024];
                     let n = plugin_socket.read(&mut buf).await.unwrap();
