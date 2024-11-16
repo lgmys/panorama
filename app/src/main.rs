@@ -16,7 +16,10 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, UnixListener},
     process::Command,
-    sync::{mpsc, oneshot, Mutex},
+    sync::{
+        mpsc::{self, Sender},
+        oneshot, Mutex,
+    },
 };
 use tokio_stream::wrappers::UnixListenerStream;
 use tower::{Service, ServiceExt};
@@ -129,28 +132,14 @@ async fn main() {
                     plugin_socket.write_all(message.as_bytes()).await.unwrap();
                     println!("Sent to {}: {}", &plugin_id, &message);
 
-                    // TODO: make it a function
-                    let (response_tx, response_rx) = oneshot::channel();
-                    // Send the request message
-                    let request2 = RequestMessage {
-                        text: "ha 2".to_string(),
-                        response_tx,
-                    };
-
                     // NOTE: its important to check if the plugin is not trying to call a method on
                     // itself
                     if plugin_id != "discover2" {
-                        if let Err(_) = tx_map.get("discover2").unwrap().send(request2).await {
-                            dbg!("Failed to send message");
-                        } else {
-                            // Wait for the response
-                            match response_rx.await {
-                                Ok(response) => dbg!(response),
-                                Err(_) => dbg!("Failed to receive response".to_string()),
-                            };
+                        match send_message_to_plugin(tx_map.clone(), "discover2", "hi 2".to_string()).await {
+                            Ok(msg) => println!("got the message from discover2: {}", msg),
+                            Err(_) => todo!(),
                         }
                     }
-                    // TODO: end make it a function
 
                     let mut buf = vec![0; 1024];
                     let n = plugin_socket.read(&mut buf).await.unwrap();
@@ -167,30 +156,37 @@ async fn main() {
     }
 }
 
-async fn root(
-    ConnectInfo(info): ConnectInfo<SocketAddr>,
-    State(state): State<AppState>,
-) -> &'static str {
-    dbg!(info);
-
-    // Create a oneshot channel for the response
+async fn send_message_to_plugin(
+    plugins: Arc<HashMap<String, Sender<RequestMessage>>>,
+    plugin: &str,
+    message: String,
+) -> Result<String, ()> {
     let (response_tx, response_rx) = oneshot::channel();
 
-    // Send the request message
     let request = RequestMessage {
-        text: "ha!".to_string(),
+        text: message,
         response_tx,
     };
 
-    if let Err(_) = state.tx.get("discover").unwrap().send(request).await {
-        dbg!("Failed to send message");
+    if let Err(_) = plugins.get(plugin).unwrap().send(request).await {
+        Err(())
     } else {
         // Wait for the response
         match response_rx.await {
-            Ok(response) => dbg!(response),
-            Err(_) => dbg!("Failed to receive response".to_string()),
-        };
+            Ok(response) => Ok(response),
+            Err(_) => Err(()),
+        }
     }
+}
 
-    return "hello";
+async fn root(ConnectInfo(info): ConnectInfo<SocketAddr>, State(state): State<AppState>) -> String {
+    dbg!(info);
+
+    match send_message_to_plugin(state.tx.clone(), "discover", "hi".to_string()).await {
+        Ok(response) => {
+            let res = response.clone();
+            return res;
+        }
+        Err(_) => "error".to_string(),
+    }
 }
