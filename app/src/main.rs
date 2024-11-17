@@ -49,7 +49,7 @@ async fn proxy_to_backend(
 
 // Start the backend process
 fn start_backend_process(socket_path: &str) -> Result<(), (hyper::StatusCode, String)> {
-    println!("Starting backend process...");
+    println!("Starting backend process on {}", socket_path);
 
     match Command::new("target/debug/discover")
         .arg(socket_path)
