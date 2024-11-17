@@ -1,7 +1,7 @@
 use axum::{extract::Path, routing::get, Router};
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
-use hyper_util::client::legacy::Client;
+use hyper_util::{client::legacy::Client, rt::TokioIo};
 use hyperlocal::{UnixClientExt, UnixConnector, Uri};
 use std::process::Command;
 
@@ -30,19 +30,36 @@ async fn proxy_to_backend(
 ) -> Result<String, (hyper::StatusCode, String)> {
     let socket_path = "/tmp/backend.sock";
 
-    let url = Uri::new(socket_path, "/").into();
+    let stream = tokio::net::UnixStream::connect(socket_path)
+        .await
+        .expect("Failed to connect to server");
+    let io = TokioIo::new(stream);
 
-    let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
+    use bytes::Bytes;
+    use http_body_util::Empty;
+    use hyper::client::conn;
+    use hyper::{Request, StatusCode};
 
-    let mut response = client.get(url).await.unwrap();
+    let (mut request_sender, connection) = conn::http1::handshake(io).await.unwrap();
 
-    while let Some(frame_result) = response.frame().await {
-        let frame = frame_result.unwrap();
-
-        if let Some(segment) = frame.data_ref() {
-            dbg!(segment);
+    // spawn a task to poll the connection and drive the HTTP state
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("Error in connection: {}", e);
         }
-    }
+    });
+
+    // we should just do a HEAD request if --meta is set
+    let request = Request::builder()
+        .method("GET")
+        .uri(&format!("/",))
+        .body(Empty::<Bytes>::new())
+        .unwrap();
+
+    let mut res = request_sender.send_request(request).await.unwrap();
+    assert!(res.status() == StatusCode::OK);
+
+    println!("{}", res.status());
 
     Ok("".to_string())
 }
