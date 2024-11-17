@@ -1,30 +1,51 @@
 use std::env;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::UnixStream;
+
+use axum::{http::Request, routing::get, Router};
+use hyper::body::Incoming;
+use std::path::PathBuf;
+use tokio::net::UnixListener;
+use tower::Service;
+
+use hyper_util::{
+    rt::{TokioExecutor, TokioIo},
+    server,
+};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Get the socket path from arguments
+async fn main() {
     let args: Vec<String> = env::args().collect();
     let socket_path = &args[1];
 
-    // Connect to the Unix socket
-    let mut socket = UnixStream::connect(socket_path).await?;
+    println!("starting plugin on {}", &socket_path);
+    let path = PathBuf::from(socket_path);
 
-    println!("Connected to socket at {}", socket_path);
+    let _ = tokio::fs::remove_file(&path).await;
+
+    let uds = UnixListener::bind(path.clone()).unwrap();
+    let app = Router::new().route("/", get(handler));
 
     loop {
-        // Read data from the parent
-        let mut buf = vec![0; 1024];
-        let n = socket.read(&mut buf).await?;
-        println!(
-            "Received from parent: {}",
-            String::from_utf8_lossy(&buf[..n])
-        );
+        let (socket, _remote_addr) = uds.accept().await.unwrap();
 
-        // Send data back to the parent
-        let response = "Hello from child";
-        socket.write_all(response.as_bytes()).await?;
-        println!("Sent to parent: {}", response);
+        let tower_service = app.clone();
+
+        tokio::spawn(async move {
+            let socket = TokioIo::new(socket);
+
+            let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
+                tower_service.clone().call(request)
+            });
+
+            if let Err(err) = server::conn::auto::Builder::new(TokioExecutor::new())
+                .serve_connection_with_upgrades(socket, hyper_service)
+                .await
+            {
+                eprintln!("failed to serve connection: {err:#}");
+            }
+        });
     }
+}
+
+async fn handler() -> &'static str {
+    "Hello, World!"
 }
