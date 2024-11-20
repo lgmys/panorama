@@ -1,0 +1,5 @@
+packages:
+  - 'app/web'
+  - 'plugins/*/web'
+  - 'packages/**/*'
+  - '!**/test/**'
