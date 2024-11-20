@@ -1,8 +1,14 @@
 {
-  "name": "web",
+  "name": "@panorama/discover",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "module": "./dist/my-lib.js",
+  "exports": {
+    ".": {
+      "import": "./dist/discover.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
