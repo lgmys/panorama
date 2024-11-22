@@ -1,15 +1,4 @@
 export const loadPlugin = (pluginId: string) => {
-    const pluginHost = document.querySelector('#plugin-host')!;
-    pluginHost.attachShadow({mode: 'open'});
-
-    const pluginWrapper = document.createElement('div');
-    pluginWrapper.setAttribute('id', 'plugin-wrapper');
-
-    pluginHost.shadowRoot?.appendChild(pluginWrapper);
-
-    // @ts-expect-error ignore
-    window.pluginWrapper = pluginWrapper;
-
     const stylesheet = document.createElement('link');
     stylesheet.href = `/plugins/${pluginId}/style.css`;
     stylesheet.rel = 'stylesheet';
@@ -21,6 +10,19 @@ export const loadPlugin = (pluginId: string) => {
       plugin.start(window.pluginWrapper, {pluginId: '${pluginId}', basename: '/app/${pluginId}'});
     `;
 
-    document.head.appendChild(stylesheet);
-    document.head.appendChild(scriptElement);
+    const pluginHost = document.querySelector('#plugin-host')!;
+    pluginHost.attachShadow({mode: 'open'});
+
+    const plugin = document.createElement('div');
+    plugin.appendChild(stylesheet);
+
+    const pluginInner = document.createElement('div');
+
+    // @ts-expect-error ignore
+    window.pluginWrapper = pluginInner;
+
+    plugin.appendChild(scriptElement);
+    plugin.appendChild(pluginInner);
+
+    pluginHost.shadowRoot?.appendChild(plugin);
 }
