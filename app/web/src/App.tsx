@@ -13,12 +13,20 @@ const plugins: Plugin[] = [
   }
 ];
 
+const BASE = '/app'
+
+const routes = {
+  HOME: `${BASE}/`
+};
+
+const pluginRoute = (plugin: Plugin) => `${BASE}/${plugin.id}`;
+
 const MenuPrimary = () => {
   return (
     <nav>
-      <div><Link to={'/app'}>Home</Link></div>
+      <div><Link to={routes.HOME}>Home</Link></div>
 
-      {plugins.map(plugin => <div key={plugin.id} ><Link to={`/app/${plugin.id}`}>{plugin.id}</Link></div>)}
+      {plugins.map(plugin => <div key={plugin.id} ><Link to={pluginRoute(plugin)}>{plugin.id}</Link></div>)}
     </nav>
   );
 }
@@ -58,14 +66,11 @@ export const Router = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path='/app' Component={App}>
-          <Route Component={Home} path='/app/' />
+        <Route path={BASE} Component={App}>
+          <Route Component={Home} path={routes.HOME} />
           <Route path=":pluginId/*" Component={PluginRoot} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
-
-
-
