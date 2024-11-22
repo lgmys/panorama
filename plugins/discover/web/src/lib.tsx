@@ -1,8 +1,14 @@
 import { createRoot } from "react-dom/client"
-import App from "./App";
+import {Router} from "./App";
 
-export const start = (container: HTMLElement) => {
+export interface PluginStartupConfig {
+  pluginId: string;
+  basename: string;
+}
+
+export const start = (container: HTMLElement, config: PluginStartupConfig) => {
+  console.log('starting discover plugin', config);
   const root = createRoot(container);
 
-  root.render(<App />)
+  root.render(<Router basename={config.basename} />)
 }

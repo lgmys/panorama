@@ -1,45 +1,71 @@
 import './App.css'
-import { useCallback } from 'react'
+import { useEffect, useRef } from 'react'
+import { BrowserRouter, Link, Outlet, Route, Routes, useParams } from "react-router";
+import { loadPlugin } from './loadPlugin';
 
-const loadPlugin = (pluginId: string) => {
-    const pluginHost = document.querySelector('#plugin-host')!;
-    pluginHost.attachShadow({mode: 'open'});
-
-    const pluginWrapper = document.createElement('div');
-    pluginWrapper.setAttribute('id', 'plugin-wrapper');
-
-    pluginHost.shadowRoot?.appendChild(pluginWrapper);
-
-    // @ts-expect-error ignore
-    window.pluginWrapper = pluginWrapper;
-
-    const stylesheet = document.createElement('link');
-    stylesheet.href = `/plugins/${pluginId}/style.css`;
-    stylesheet.rel = 'stylesheet';
-
-    const scriptElement = document.createElement('script');
-    scriptElement.type = 'module';
-    scriptElement.innerText = `
-      const plugin = await import('/plugins/${pluginId}/${pluginId}.js');
-      plugin.start(window.pluginWrapper);
-    `;
-
-    document.head.appendChild(stylesheet);
-    document.head.appendChild(scriptElement);
+interface Plugin {
+  id: string,
 }
 
-function App() {
-  const onLoad = useCallback(() => {
-    loadPlugin('discover');
-  }, []);
+const plugins: Plugin[] = [
+  {
+    id: 'discover',
+  }
+];
 
+const MenuPrimary = () => {
   return (
-    <>
-      <button onClick={onLoad}>Load discover plugin</button>
+    <nav>
+      <div><Link to={'/app'}>Home</Link></div>
 
-      <div id="plugin-host"></div>
-    </>
+      {plugins.map(plugin => <div key={plugin.id} ><Link to={`/app/${plugin.id}`}>{plugin.id}</Link></div>)}
+    </nav>
+  );
+}
+
+const PluginRoot = () => {
+  const params = useParams();
+  const loadedRef = useRef<boolean>();
+
+  useEffect(() => {
+    if (!params.pluginId) {
+      return;
+    }
+
+      if (!loadedRef.current) {
+        loadPlugin(params.pluginId);
+        loadedRef.current = true;
+      }
+  }, [params.pluginId]);
+
+  return <div id="plugin-host"></div>
+}
+
+const Home = () => {
+  return <div>Home</div>;
+}
+
+const App = () => {
+  return (
+      <div style={{display: 'flex'}}>
+        <MenuPrimary />
+        <Outlet />
+      </div>
   )
 }
 
-export default App
+export const Router = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path='/app' Component={App}>
+          <Route Component={Home} path='/app/' />
+          <Route path=":pluginId/*" Component={PluginRoot} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+
+

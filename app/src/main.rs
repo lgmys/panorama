@@ -1,8 +1,5 @@
 use axum::{extract::Path, routing::get, Router};
-use http_body_util::{BodyExt, Full};
-use hyper::body::Bytes;
-use hyper_util::{client::legacy::Client, rt::TokioIo};
-use hyperlocal::{UnixClientExt, UnixConnector, Uri};
+use hyper_util::rt::TokioIo;
 use std::process::Command;
 
 #[tokio::main]
@@ -49,7 +46,6 @@ async fn proxy_to_backend(
         }
     });
 
-    // we should just do a HEAD request if --meta is set
     let request = Request::builder()
         .method("GET")
         .uri(&format!("/",))
