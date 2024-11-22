@@ -6,7 +6,7 @@ export interface PluginStartupConfig {
   basename: string;
 }
 
-export const start = (container: HTMLElement, config: PluginStartupConfig) => {
+export const createRouter = (container: HTMLElement, config: PluginStartupConfig) => {
   console.log('starting discover plugin', config);
   const root = createRoot(container);
 

@@ -7,7 +7,7 @@ export const loadPlugin = (pluginId: string) => {
     scriptElement.type = 'module';
     scriptElement.innerText = `
       const plugin = await import('/plugins/${pluginId}/${pluginId}.js');
-      plugin.start(window.pluginWrapper, {pluginId: '${pluginId}', basename: '/app/${pluginId}'});
+      plugin.createRouter(window.pluginWrapper, {pluginId: '${pluginId}', basename: '/app/${pluginId}'});
     `;
 
     const pluginHost = document.querySelector('#plugin-host')!;

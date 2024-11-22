@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let socket_path = "/tmp/backend.sock";
 
-    tokio::fs::remove_file(&socket_path).await.unwrap();
+    tokio::fs::remove_file(&socket_path).await;
     // Ensure the backend process is running
     if !std::path::Path::new(socket_path).exists() {
         start_backend_process(socket_path).unwrap();
