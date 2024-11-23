@@ -21,7 +21,7 @@ export const AppShell: FC<PropsWithChildren<{nav: ReactNode}>> = ({children, nav
       }
     >
     <MantineAppShell.Header>
-      <Text fw={700}>Panorama</Text>
+      <Text size="xs" pt={12} pl={8} fw={700} style={{textTransform: 'uppercase'}}>panorama</Text>
     </MantineAppShell.Header>
     <MantineAppShell.Navbar>{nav}</MantineAppShell.Navbar>
     <MantineAppShell.Main>
