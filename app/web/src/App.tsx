@@ -1,15 +1,19 @@
 import './App.css'
-import { useEffect, useRef } from 'react'
-import { BrowserRouter, Link, Outlet, Route, Routes, useParams } from "react-router";
+import { FC, useEffect, useRef } from 'react'
+import { BrowserRouter, Outlet, Route, Routes, useParams, Link} from "react-router";
 import { loadPlugin } from './loadPlugin';
+
+import {AppShell, Button, NavLink, ThemeProvider} from '@panorama/atoms';
 
 interface Plugin {
   id: string,
+  label: string,
 }
 
 const plugins: Plugin[] = [
   {
     id: 'discover',
+    label: 'Discover'
   }
 ];
 
@@ -21,12 +25,16 @@ const routes = {
 
 const pluginRoute = (plugin: Plugin) => `${BASE}/${plugin.id}`;
 
+const MenuItem: FC<{to: string, label: string}> = ({to, label}) => {
+    return <NavLink label={label} component={Link} to={to} />
+}
+
 const MenuPrimary = () => {
   return (
     <nav>
-      <div><Link to={routes.HOME}>Home</Link></div>
+      <MenuItem label='Home' to={routes.HOME} />
 
-      {plugins.map(plugin => <div key={plugin.id} ><Link to={pluginRoute(plugin)}>{plugin.id}</Link></div>)}
+      {plugins.map(plugin => <MenuItem to={pluginRoute(plugin)} label={plugin.label} />)}
     </nav>
   );
 }
@@ -50,27 +58,28 @@ const PluginRoot = () => {
 }
 
 const Home = () => {
-  return <div>Home</div>;
+  return <div><Button>Home</Button></div>;
 }
 
 const App = () => {
   return (
-      <div style={{display: 'flex'}}>
-        <MenuPrimary />
+      <AppShell nav={<MenuPrimary />}>
         <Outlet />
-      </div>
+      </AppShell>
   )
 }
 
 export const Router = () => {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path={BASE} Component={App}>
-          <Route Component={Home} path={routes.HOME} />
-          <Route path=":pluginId/*" Component={PluginRoot} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path={BASE} Component={App}>
+            <Route Component={Home} path={routes.HOME} />
+            <Route path=":pluginId/*" Component={PluginRoot} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

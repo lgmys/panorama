@@ -52,7 +52,7 @@ async fn proxy_to_backend(
         .body(Empty::<Bytes>::new())
         .unwrap();
 
-    let mut res = request_sender.send_request(request).await.unwrap();
+    let res = request_sender.send_request(request).await.unwrap();
     assert!(res.status() == StatusCode::OK);
 
     println!("{}", res.status());
