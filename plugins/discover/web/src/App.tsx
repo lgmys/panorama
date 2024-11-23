@@ -1,6 +1,14 @@
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
 import './App.css';
-import { BrowserRouter, Link, Outlet, Route, Routes } from 'react-router';
+import {
+  BrowserRouter,
+  Link,
+  Outlet,
+  Route,
+  Routes,
+  useNavigate,
+} from 'react-router';
+import { PLUGIN_EVENTS, PluginNavigate } from '@panorama/shared-types';
 
 export interface RouterProps {
   basename?: string;
@@ -19,6 +27,27 @@ export const Router: FC<RouterProps> = (props) => {
 };
 
 function App() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const pluginNavigationEventHandler = (event: unknown) => {
+      const { detail } = event as CustomEvent<PluginNavigate>;
+      navigate(detail.to);
+    };
+
+    window.addEventListener(
+      PLUGIN_EVENTS.NAVIGATE,
+      pluginNavigationEventHandler,
+    );
+
+    return () => {
+      window.removeEventListener(
+        PLUGIN_EVENTS.NAVIGATE,
+        pluginNavigationEventHandler,
+      );
+    };
+  }, [navigate]);
+
   return (
     <>
       <h1>Discover</h1>

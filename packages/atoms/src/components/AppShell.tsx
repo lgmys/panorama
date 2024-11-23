@@ -1,10 +1,63 @@
-import { FC, PropsWithChildren, ReactNode } from 'react';
-import { Container, AppShell as MantineAppShell, Text } from '@mantine/core';
+import { FC, PropsWithChildren, useEffect, useMemo, useState } from 'react';
+import {
+  Container,
+  AppShell as MantineAppShell,
+  NavLink,
+  Text,
+} from '@mantine/core';
+import { PLUGIN_EVENTS, PluginNavigationInit } from '@panorama/shared-types';
 
-export const AppShell: FC<PropsWithChildren<{ nav: ReactNode }>> = ({
-  children,
-  nav,
-}) => {
+export const AppShell: FC<
+  PropsWithChildren<{
+    plugins: Array<{ label: string; to: string; id: string }>;
+  }>
+> = ({ children, plugins }) => {
+  const [pluginNavigation, setPluginNavigation] = useState<
+    PluginNavigationInit | undefined
+  >();
+
+  useEffect(() => {
+    window.addEventListener(
+      PLUGIN_EVENTS.INIT_NAVIGATION,
+      (event: unknown) => {
+        if (!(event instanceof CustomEvent)) {
+          return;
+        }
+
+        const { detail } = event as CustomEvent<PluginNavigationInit>;
+
+        setPluginNavigation(detail);
+      },
+      { once: true },
+    );
+  }, []);
+
+  const navigationItems = useMemo(() => {
+    return plugins.map((plugin) => {
+      if (pluginNavigation?.pluginId === plugin.id) {
+        return (
+          <NavLink label={plugin.label}>
+            {pluginNavigation?.items.map((item) => {
+              return (
+                <NavLink
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent(PLUGIN_EVENTS.NAVIGATE, { detail: item }),
+                    )
+                  }
+                  key={item.to}
+                  label={item.label}
+                />
+              );
+            })}
+          </NavLink>
+        );
+      }
+
+      return <NavLink href={plugin.to} component="a" label={plugin.label} />;
+    });
+  }, [pluginNavigation, plugins]);
+
   return (
     <MantineAppShell
       navbar={{
@@ -30,7 +83,7 @@ export const AppShell: FC<PropsWithChildren<{ nav: ReactNode }>> = ({
           panorama
         </Text>
       </MantineAppShell.Header>
-      <MantineAppShell.Navbar>{nav}</MantineAppShell.Navbar>
+      <MantineAppShell.Navbar>{navigationItems}</MantineAppShell.Navbar>
       <MantineAppShell.Main>
         <Container fluid pt={4}>
           {children}

@@ -1,16 +1,9 @@
 import './App.css';
-import { FC, useEffect, useRef } from 'react';
-import {
-  BrowserRouter,
-  Outlet,
-  Route,
-  Routes,
-  useParams,
-  Link,
-} from 'react-router';
+import { useEffect, useRef } from 'react';
+import { BrowserRouter, Outlet, Route, Routes, useParams } from 'react-router';
 import { loadPlugin } from './loadPlugin';
 
-import { AppShell, Button, NavLink, ThemeProvider } from '@panorama/atoms';
+import { AppShell, Button, ThemeProvider } from '@panorama/atoms';
 
 interface Plugin {
   id: string;
@@ -31,22 +24,6 @@ const routes = {
 };
 
 const pluginRoute = (plugin: Plugin) => `${BASE}/${plugin.id}`;
-
-const MenuItem: FC<{ to: string; label: string }> = ({ to, label }) => {
-  return <NavLink label={label} component={Link} to={to} />;
-};
-
-const MenuPrimary = () => {
-  return (
-    <nav>
-      <MenuItem label="Home" to={routes.HOME} />
-
-      {plugins.map((plugin) => (
-        <MenuItem to={pluginRoute(plugin)} label={plugin.label} />
-      ))}
-    </nav>
-  );
-};
 
 const PluginRoot = () => {
   const params = useParams();
@@ -76,7 +53,13 @@ const Home = () => {
 
 const App = () => {
   return (
-    <AppShell nav={<MenuPrimary />}>
+    <AppShell
+      plugins={plugins.map((plugin) => ({
+        label: plugin.label,
+        to: pluginRoute(plugin),
+        id: plugin.id,
+      }))}
+    >
       <Outlet />
     </AppShell>
   );
