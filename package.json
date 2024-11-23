@@ -12,5 +12,8 @@
     "node": ">=20",
     "pnpm": ">=9.13.2"
   },
-  "packageManager": "pnpm"
+  "packageManager": "pnpm",
+  "devDependencies": {
+    "prettier": "3.3.3"
+  }
 }

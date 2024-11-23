@@ -9,7 +9,7 @@ function App() {
         <Button>some button</Button>
       </ThemeProvider>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -1,8 +1,7 @@
-export {ThemeProvider} from './components/ThemeProvider';
+export { ThemeProvider } from './components/ThemeProvider';
 
-export {AppShell} from './components/AppShell';
+export { AppShell } from './components/AppShell';
 
-export {Button} from './components/Button';
+export { Button } from './components/Button';
 
-export {NavLink} from './components/NavLink';
-
+export { NavLink } from './components/NavLink';
