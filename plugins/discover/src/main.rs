@@ -1,7 +1,8 @@
 use std::env;
 
-use axum::{http::Request, routing::get, Router};
+use axum::{http::Request, routing::get, Json, Router};
 use hyper::body::Incoming;
+use serde::Serialize;
 use std::path::PathBuf;
 use tokio::net::UnixListener;
 use tower::Service;
@@ -11,18 +12,44 @@ use hyper_util::{
     server,
 };
 
+#[derive(Serialize)]
+pub struct Datasource {
+    pub id: String,
+}
+
+#[derive(Serialize)]
+pub struct Manifest {
+    pub id: String,
+    pub version: String,
+    pub exported_datasources: Vec<Datasource>,
+}
+
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
     let socket_path = &args[1];
 
     println!("starting Discover plugin on unix socket: {}", &socket_path);
-    let path = PathBuf::from(socket_path);
 
+    let path = PathBuf::from(socket_path);
     let _ = tokio::fs::remove_file(&path).await;
 
     let uds = UnixListener::bind(path.clone()).unwrap();
-    let app = Router::new().route("/", get(handler));
+
+    let app = Router::new().route("/", get(handler)).route(
+        "/manifest",
+        get(|| async move {
+            let manifest = Manifest {
+                id: "discover".to_string(),
+                version: "0.0.1".to_string(),
+                exported_datasources: vec![Datasource {
+                    id: "elasticsearch".to_string(),
+                }],
+            };
+
+            Json(manifest)
+        }),
+    );
 
     loop {
         let (socket, _remote_addr) = uds.accept().await.unwrap();
@@ -46,6 +73,6 @@ async fn main() {
     }
 }
 
-async fn handler() -> &'static str {
-    "Hello, World!"
+async fn handler() -> Json<String> {
+    Json(format!("Hello, World!"))
 }

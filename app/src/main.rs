@@ -1,11 +1,16 @@
 use axum::{
     extract::{Path, State},
     routing::get,
-    Router,
+    Json, Router,
 };
-use futures::future;
+use bytes::Bytes;
+use futures::{future, StreamExt};
+use http_body_util::{BodyExt, Empty};
+use hyper::client::conn;
+use hyper::Request;
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
+use serde_json::Value;
 use std::{
     collections::HashMap,
     sync::Arc,
@@ -57,7 +62,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let server_task = run_axum_server(Arc::new(config.clone()));
 
-    // Use tokio::select! to run both tasks concurrently
     tokio::select! {
         _ = future::select_all(tasks) => {
             eprintln!("File monitoring task exited.");
@@ -72,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run_axum_server(config: Arc<PanoramaConfig>) {
     let app = Router::new()
-        .route("/api/plugin/:plugin_id", get(proxy_to_backend))
+        .route("/api/plugin/:plugin_id/*rest", get(proxy_to_backend))
         .with_state(AppState { config });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -80,7 +84,6 @@ async fn run_axum_server(config: Arc<PanoramaConfig>) {
     axum::serve(listener, app).await.unwrap();
 }
 
-// Monitor the file for changes and restart the backend process if it changes
 async fn monitor_process(process_path: String, socket_path: String) {
     println!("Starting backend process monitoring for {}", process_path);
 
@@ -123,6 +126,8 @@ async fn monitor_process(process_path: String, socket_path: String) {
                     eprintln!("Error restarting backend process: {:?}", err);
                 }
             }
+
+            // FIXME: load plugin server manifest using the endpoint
         }
 
         // Sleep for a while before checking again
@@ -167,22 +172,11 @@ async fn restart_backend_process(
     }
 }
 
-// Proxy HTTP requests to the backend process
-async fn proxy_to_backend(
-    Path(plugin_id): Path<String>,
-    State(state): State<AppState>,
-) -> Result<String, (hyper::StatusCode, String)> {
-    let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
-
-    let stream = tokio::net::UnixStream::connect(plugin_config.socket_path.clone())
+async fn forward_request(socket_path: &str, uri: &str) -> Result<String, ()> {
+    let stream = tokio::net::UnixStream::connect(socket_path)
         .await
         .expect("Failed to connect to server");
     let io = TokioIo::new(stream);
-
-    use bytes::Bytes;
-    use http_body_util::Empty;
-    use hyper::client::conn;
-    use hyper::{Request, StatusCode};
 
     let (mut request_sender, connection) = conn::http1::handshake(io).await.unwrap();
 
@@ -195,14 +189,35 @@ async fn proxy_to_backend(
 
     let request = Request::builder()
         .method("GET")
-        .uri(&format!("/",))
+        .uri(uri)
         .body(Empty::<Bytes>::new())
         .unwrap();
 
     let res = request_sender.send_request(request).await.unwrap();
-    assert!(res.status() == StatusCode::OK);
+    let body = res.collect().await.unwrap().to_bytes();
+    let string = String::from_utf8_lossy(&body);
 
-    println!("{}", res.status());
+    return Ok(string.to_string());
+}
 
-    Ok("".to_string())
+// Proxy HTTP requests to the backend process
+async fn proxy_to_backend(
+    State(state): State<AppState>,
+    Path((plugin_id, rest)): Path<(String, String)>,
+) -> Result<Json<Value>, (hyper::StatusCode, String)> {
+    let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
+
+    dbg!(&rest);
+
+    let res = forward_request(&plugin_config.socket_path, &format!("/{}", &rest)).await;
+
+    dbg!(&res);
+
+    match res {
+        Ok(response_string) => Ok(Json(serde_json::from_str(&response_string).unwrap())),
+        Err(_) => Err((
+            hyper::StatusCode::INTERNAL_SERVER_ERROR,
+            "error".to_string(),
+        )),
+    }
 }
