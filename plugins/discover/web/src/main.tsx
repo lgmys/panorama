@@ -14,4 +14,7 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-setTimeout(() => dispatchNavEvent(), 200);
+setTimeout(
+  () => dispatchNavEvent({ pluginId: 'discover', basename: '/' }),
+  100,
+);

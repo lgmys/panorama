@@ -1,17 +1,30 @@
-import { FC, PropsWithChildren, useEffect, useMemo, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  FC,
+  PropsWithChildren,
+  ReactElement,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  AccordionChevron,
   Container,
   AppShell as MantineAppShell,
   NavLink,
   Text,
 } from '@mantine/core';
+
 import { PLUGIN_EVENTS, PluginNavigationInit } from '@panorama/shared-types';
 
 export const AppShell: FC<
   PropsWithChildren<{
+    navPre?: ReactElement;
+    navPost?: ReactElement;
+    navLinkComponent?: ReactElement;
     plugins: Array<{ label: string; to: string; id: string }>;
   }>
-> = ({ children, plugins }) => {
+> = ({ children, plugins, navLinkComponent, navPre, navPost }) => {
   const [pluginNavigation, setPluginNavigation] = useState<
     PluginNavigationInit | undefined
   >();
@@ -36,15 +49,18 @@ export const AppShell: FC<
     return plugins.map((plugin) => {
       if (pluginNavigation?.pluginId === plugin.id) {
         return (
-          <NavLink label={plugin.label}>
+          <NavLink key={plugin.id} label={plugin.label} defaultOpened>
             {pluginNavigation?.items.map((item) => {
               return (
                 <NavLink
-                  onClick={() =>
+                  onClick={(e) => {
+                    e.preventDefault();
                     window.dispatchEvent(
-                      new CustomEvent(PLUGIN_EVENTS.NAVIGATE, { detail: item }),
-                    )
-                  }
+                      new CustomEvent(PLUGIN_EVENTS.NAVIGATE, {
+                        detail: { ...item, plugin },
+                      }),
+                    );
+                  }}
                   key={item.to}
                   label={item.label}
                 />
@@ -54,9 +70,24 @@ export const AppShell: FC<
         );
       }
 
-      return <NavLink href={plugin.to} component="a" label={plugin.label} />;
+      return (
+        <NavLink
+          key={plugin.to}
+          to={plugin.to}
+          component={(navLinkComponent as any) ?? 'a'}
+          label={plugin.label}
+          rightSection={
+            <AccordionChevron style={{ transform: 'rotate(-90deg)' }} />
+          }
+        />
+      );
     });
-  }, [pluginNavigation, plugins]);
+  }, [
+    navLinkComponent,
+    pluginNavigation?.items,
+    pluginNavigation?.pluginId,
+    plugins,
+  ]);
 
   return (
     <MantineAppShell
@@ -83,7 +114,11 @@ export const AppShell: FC<
           panorama
         </Text>
       </MantineAppShell.Header>
-      <MantineAppShell.Navbar>{navigationItems}</MantineAppShell.Navbar>
+      <MantineAppShell.Navbar>
+        {navPre}
+        {navigationItems}
+        {navPost}
+      </MantineAppShell.Navbar>
       <MantineAppShell.Main>
         <Container fluid pt={4}>
           {children}

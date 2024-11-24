@@ -32,6 +32,7 @@ function App() {
   useEffect(() => {
     const pluginNavigationEventHandler = (event: unknown) => {
       const { detail } = event as CustomEvent<PluginNavigate>;
+      console.log('pluginNavigationEventHandler', detail);
       navigate(detail.to);
     };
 

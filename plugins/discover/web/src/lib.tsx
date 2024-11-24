@@ -1,11 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { Router } from './App';
 import { dispatchNavEvent } from './pluginNav';
-
-export interface PluginStartupConfig {
-  pluginId: string;
-  basename: string;
-}
+import { PluginStartupConfig } from './types';
 
 export const createRouter = (
   container: HTMLElement,
@@ -13,7 +9,7 @@ export const createRouter = (
 ) => {
   console.log('starting discover plugin', config);
 
-  dispatchNavEvent();
+  dispatchNavEvent(config);
 
   const root = createRoot(container);
 

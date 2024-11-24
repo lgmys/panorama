@@ -1,9 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import './App.css';
 import { useEffect, useRef } from 'react';
-import { BrowserRouter, Outlet, Route, Routes, useParams } from 'react-router';
+import {
+  BrowserRouter,
+  Link,
+  Outlet,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from 'react-router';
 import { loadPlugin } from './loadPlugin';
 
-import { AppShell, Button, ThemeProvider } from '@panorama/atoms';
+import { AppShell, Button, NavLink, ThemeProvider } from '@panorama/atoms';
+
+import { PLUGIN_EVENTS, PluginNavigate } from '@panorama/shared-types';
 
 interface Plugin {
   id: string;
@@ -52,8 +63,32 @@ const Home = () => {
 };
 
 const App = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handler = (event: unknown) => {
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const navigationEvent = event as CustomEvent<
+        PluginNavigate & { plugin: { to: string } }
+      >;
+
+      console.log(navigationEvent.detail);
+
+      navigate(navigationEvent.detail.plugin.to);
+    };
+
+    window.addEventListener(PLUGIN_EVENTS.NAVIGATE, handler);
+
+    return () => window.removeEventListener(PLUGIN_EVENTS.NAVIGATE, handler);
+  }, [navigate]);
+
   return (
     <AppShell
+      navPre={<NavLink component={Link as any} label="Home" to={routes.HOME} />}
+      navLinkComponent={Link as any}
       plugins={plugins.map((plugin) => ({
         label: plugin.label,
         to: pluginRoute(plugin),
@@ -70,9 +105,9 @@ export const Router = () => {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
-          <Route path={BASE} Component={App}>
-            <Route Component={Home} path={routes.HOME} />
-            <Route path=":pluginId/*" Component={PluginRoot} />
+          <Route path={BASE} element={<App />}>
+            <Route path=":pluginId/*" element={<PluginRoot />} />
+            <Route element={<Home />} index />
           </Route>
         </Routes>
       </BrowserRouter>

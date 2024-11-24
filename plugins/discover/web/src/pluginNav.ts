@@ -1,4 +1,5 @@
 import { PLUGIN_EVENTS, PluginNavigationInit } from '@panorama/shared-types';
+import { PluginStartupConfig } from './types';
 
 export const pluginNav: PluginNavigationInit = {
   pluginId: 'discover',
@@ -14,8 +15,10 @@ export const pluginNav: PluginNavigationInit = {
   ],
 };
 
-export const dispatchNavEvent = () => {
+export const dispatchNavEvent = (config: PluginStartupConfig) => {
   window.dispatchEvent(
-    new CustomEvent(PLUGIN_EVENTS.INIT_NAVIGATION, { detail: pluginNav }),
+    new CustomEvent(PLUGIN_EVENTS.INIT_NAVIGATION, {
+      detail: { ...pluginNav, pluginId: config.pluginId },
+    }),
   );
 };
