@@ -4,15 +4,11 @@ use std::process::Command;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app = Router::new().route("/api/plugin/:endpoint", get(proxy_to_backend));
+    let app = Router::new().route("/api/plugin/:plugin_id", get(proxy_to_backend));
 
     let socket_path = "/tmp/backend.sock";
 
-    tokio::fs::remove_file(&socket_path).await;
-    // Ensure the backend process is running
-    if !std::path::Path::new(socket_path).exists() {
-        start_backend_process(socket_path).unwrap();
-    }
+    start_backend_process(socket_path).await.unwrap();
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
@@ -23,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // Proxy HTTP requests to the backend process
 async fn proxy_to_backend(
-    Path(endpoint): Path<String>,
+    Path(plugin_id): Path<String>,
 ) -> Result<String, (hyper::StatusCode, String)> {
     let socket_path = "/tmp/backend.sock";
 
@@ -61,8 +57,15 @@ async fn proxy_to_backend(
 }
 
 // Start the backend process
-fn start_backend_process(socket_path: &str) -> Result<(), (hyper::StatusCode, String)> {
+async fn start_backend_process(socket_path: &str) -> Result<(), (hyper::StatusCode, String)> {
     println!("Starting backend process on {}", socket_path);
+
+    if std::path::Path::new(socket_path).exists() {
+        match tokio::fs::remove_file(&socket_path).await {
+            Ok(_) => {}
+            Err(_) => {}
+        };
+    }
 
     match Command::new("target/debug/discover")
         .arg(socket_path)
