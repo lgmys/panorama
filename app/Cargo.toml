@@ -11,6 +11,8 @@ http-body-util = "0.1.2"
 hyper = { version = "1.5.0", features = ["server"] }
 hyper-util = { version = "0.1.10", features = ["tokio", "server-auto", "http1"] }
 hyperlocal = "0.9.1"
+serde = { version = "1.0.215", features = ["derive"] }
 tokio = { version = "1.41.1", features = ["full"] }
 tokio-stream = { version = "0.1.16", features = ["net"] }
+toml = "0.8.19"
 tower = { version = "0.5.1", features = ["util"] }

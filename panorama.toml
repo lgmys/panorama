@@ -1,0 +1,4 @@
+[plugins.discover]
+binary_path = "./target/debug/discover"
+socket_path = "/tmp/backend.sock"
+

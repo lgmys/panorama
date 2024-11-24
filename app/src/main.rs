@@ -1,19 +1,65 @@
-use axum::{extract::Path, routing::get, Router};
+use axum::{
+    extract::{Path, State},
+    routing::get,
+    Router,
+};
+use futures::future;
 use hyper_util::rt::TokioIo;
-use std::time::{Duration, SystemTime};
-use tokio::{fs, process::Child, process::Command, time::sleep};
+use serde::Deserialize;
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
+use tokio::{
+    fs,
+    process::{Child, Command},
+    task,
+    time::sleep,
+};
+
+#[derive(Deserialize, Clone, Debug)]
+struct Plugin {
+    pub binary_path: String,
+    pub socket_path: String,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+struct PanoramaConfig {
+    pub plugins: HashMap<String, Plugin>,
+}
+
+#[derive(Clone)]
+struct AppState {
+    pub config: Arc<PanoramaConfig>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let socket_path = "/tmp/backend.sock";
-    let process_path = "target/debug/discover";
+    let config_path = "./panorama.toml";
+    let file = fs::read_to_string(&config_path).await.unwrap();
+    let config: PanoramaConfig = toml::from_str(&file).unwrap();
 
-    let monitor_task = monitor_process(process_path.to_string(), socket_path.to_string());
-    let server_task = run_axum_server();
+    let mut tasks: Vec<task::JoinHandle<_>> = vec![];
+
+    let values = config.plugins.clone().into_values();
+
+    for plugin_config in values {
+        let task = task::spawn(async move {
+            monitor_process(
+                plugin_config.binary_path.clone(),
+                plugin_config.socket_path.clone(),
+            )
+            .await;
+        });
+        tasks.push(task);
+    }
+
+    let server_task = run_axum_server(Arc::new(config.clone()));
 
     // Use tokio::select! to run both tasks concurrently
     tokio::select! {
-        _ = monitor_task => {
+        _ = future::select_all(tasks) => {
             eprintln!("File monitoring task exited.");
         }
         _ = server_task => {
@@ -24,8 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn run_axum_server() {
-    let app = Router::new().route("/api/plugin/:plugin_id", get(proxy_to_backend));
+async fn run_axum_server(config: Arc<PanoramaConfig>) {
+    let app = Router::new()
+        .route("/api/plugin/:plugin_id", get(proxy_to_backend))
+        .with_state(AppState { config });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
@@ -122,10 +170,11 @@ async fn restart_backend_process(
 // Proxy HTTP requests to the backend process
 async fn proxy_to_backend(
     Path(plugin_id): Path<String>,
+    State(state): State<AppState>,
 ) -> Result<String, (hyper::StatusCode, String)> {
-    let socket_path = "/tmp/backend.sock";
+    let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
 
-    let stream = tokio::net::UnixStream::connect(socket_path)
+    let stream = tokio::net::UnixStream::connect(plugin_config.socket_path.clone())
         .await
         .expect("Failed to connect to server");
     let io = TokioIo::new(stream);
