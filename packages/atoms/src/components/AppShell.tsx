@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   FC,
   PropsWithChildren,
@@ -19,9 +18,11 @@ import { PLUGIN_EVENTS, PluginNavigationInit } from '@panorama/shared-types';
 
 export const AppShell: FC<
   PropsWithChildren<{
+    insideHostApp?: boolean;
     navPre?: ReactElement;
     navPost?: ReactElement;
-    navLinkComponent?: ReactElement;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    navLinkComponent?: any;
     plugins: Array<{ label: string; to: string; id: string }>;
   }>
 > = ({ children, plugins, navLinkComponent, navPre, navPost }) => {
@@ -74,7 +75,7 @@ export const AppShell: FC<
         <NavLink
           key={plugin.to}
           to={plugin.to}
-          component={(navLinkComponent as any) ?? 'a'}
+          component={navLinkComponent ?? 'a'}
           label={plugin.label}
           rightSection={
             <AccordionChevron style={{ transform: 'rotate(-90deg)' }} />

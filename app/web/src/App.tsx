@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import './App.css';
 import { useEffect, useRef } from 'react';
 import {
@@ -87,8 +86,8 @@ const App = () => {
 
   return (
     <AppShell
-      navPre={<NavLink component={Link as any} label="Home" to={routes.HOME} />}
-      navLinkComponent={Link as any}
+      navPre={<NavLink component={Link} label="Home" to={routes.HOME} />}
+      navLinkComponent={Link}
       plugins={plugins.map((plugin) => ({
         label: plugin.label,
         to: pluginRoute(plugin),
