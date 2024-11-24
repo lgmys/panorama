@@ -8,7 +8,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <AppShell plugins={[{ id: 'discover', label: 'Discover', to: '/' }]}>
-        <Router />
+        <Router config={{ basename: '/', pluginId: 'discover' }} />
       </AppShell>
     </ThemeProvider>
   </StrictMode>,

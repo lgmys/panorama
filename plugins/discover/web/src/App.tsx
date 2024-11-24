@@ -9,14 +9,15 @@ import {
   useNavigate,
 } from 'react-router';
 import { PLUGIN_EVENTS, PluginNavigate } from '@panorama/shared-types';
+import { PluginStartupConfig } from './types';
 
 export interface RouterProps {
-  basename?: string;
+  config: PluginStartupConfig;
 }
 
 export const Router: FC<RouterProps> = (props) => {
   return (
-    <BrowserRouter basename={props.basename}>
+    <BrowserRouter basename={props.config.basename}>
       <Routes>
         <Route path="/" Component={App}>
           <Route path="/test" Component={() => <div>nested test</div>} />
@@ -54,7 +55,7 @@ function App() {
       <h1>Discover</h1>
       <div>
         <nav>
-          <Link to={'/test'}>go to test</Link>
+          <Link to={'/test'}>test</Link>
         </nav>
         <Outlet />
       </div>
