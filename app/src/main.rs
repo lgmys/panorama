@@ -172,7 +172,7 @@ async fn restart_backend_process(
     }
 }
 
-async fn forward_request(socket_path: &str, uri: &str) -> Result<String, ()> {
+async fn fetch_data_from_plugin(socket_path: &str, uri: &str) -> Result<String, ()> {
     let stream = tokio::net::UnixStream::connect(socket_path)
         .await
         .expect("Failed to connect to server");
@@ -207,11 +207,7 @@ async fn proxy_to_backend(
 ) -> Result<Json<Value>, (hyper::StatusCode, String)> {
     let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
 
-    dbg!(&rest);
-
-    let res = forward_request(&plugin_config.socket_path, &format!("/{}", &rest)).await;
-
-    dbg!(&res);
+    let res = fetch_data_from_plugin(&plugin_config.socket_path, &format!("/{}", &rest)).await;
 
     match res {
         Ok(response_string) => Ok(Json(serde_json::from_str(&response_string).unwrap())),
