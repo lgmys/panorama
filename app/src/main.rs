@@ -7,8 +7,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new().route("/api/plugin/:plugin_id", get(proxy_to_backend));
 
     let socket_path = "/tmp/backend.sock";
+    let process_path = "target/debug/discover";
 
-    start_backend_process(socket_path).await.unwrap();
+    start_backend_process(process_path, socket_path)
+        .await
+        .unwrap();
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
@@ -57,7 +60,10 @@ async fn proxy_to_backend(
 }
 
 // Start the backend process
-async fn start_backend_process(socket_path: &str) -> Result<(), (hyper::StatusCode, String)> {
+async fn start_backend_process(
+    process_path: &str,
+    socket_path: &str,
+) -> Result<(), (hyper::StatusCode, String)> {
     println!("Starting backend process on {}", socket_path);
 
     if std::path::Path::new(socket_path).exists() {
@@ -67,12 +73,9 @@ async fn start_backend_process(socket_path: &str) -> Result<(), (hyper::StatusCo
         };
     }
 
-    match Command::new("target/debug/discover")
-        .arg(socket_path)
-        .spawn()
-    {
-        Ok(_) => {
-            println!("Backend process started.");
+    match Command::new(process_path).arg(socket_path).spawn() {
+        Ok(process) => {
+            println!("Backend process started, pid: {}", process.id());
             Ok(())
         }
         Err(err) => Err((
