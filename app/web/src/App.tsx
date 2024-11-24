@@ -48,6 +48,13 @@ const PluginRoot = () => {
       loadPlugin(params.pluginId);
       loadedRef.current = true;
     }
+
+    return () => {
+      if ((window as any).pluginRoot) {
+        console.log('removing plugin from the DOM');
+        (window as any).pluginRoot.unmount();
+      }
+    };
   }, [params.pluginId]);
 
   return <div id="plugin-host"></div>;

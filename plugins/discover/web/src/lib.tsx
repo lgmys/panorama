@@ -14,4 +14,6 @@ export const createRouter = (
   const root = createRoot(container);
 
   root.render(<Router basename={config.basename} />);
+
+  return root;
 };
