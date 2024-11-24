@@ -9,6 +9,7 @@ import {
 import {
   AccordionChevron,
   Container,
+  Loader,
   AppShell as MantineAppShell,
   NavLink,
   Text,
@@ -30,20 +31,57 @@ export const AppShell: FC<
     PluginNavigationInit | undefined
   >();
 
+  const [loadingPlugin, setLoadingPlugin] = useState(false);
+
   useEffect(() => {
-    window.addEventListener(
-      PLUGIN_EVENTS.INIT_NAVIGATION,
-      (event: unknown) => {
-        if (!(event instanceof CustomEvent)) {
-          return;
-        }
+    const handlePluginLoading = (event: unknown) => {
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
 
-        const { detail } = event as CustomEvent<PluginNavigationInit>;
+      setLoadingPlugin(true);
+    };
 
-        setPluginNavigation(detail);
-      },
-      { once: true },
-    );
+    window.addEventListener(PLUGIN_EVENTS.LOADING, handlePluginLoading);
+
+    return () =>
+      window.removeEventListener(PLUGIN_EVENTS.LOADING, handlePluginLoading);
+  }, []);
+
+  useEffect(() => {
+    const handlePluginUnload = (event: unknown) => {
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      setPluginNavigation(undefined);
+    };
+
+    window.addEventListener(PLUGIN_EVENTS.UNLOAD, handlePluginUnload);
+
+    return () =>
+      window.removeEventListener(PLUGIN_EVENTS.UNLOAD, handlePluginUnload);
+  }, []);
+
+  useEffect(() => {
+    const handlePluginLoad = (event: unknown) => {
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const { detail } = event as CustomEvent<PluginNavigationInit>;
+
+      setLoadingPlugin(false);
+      setPluginNavigation(detail);
+    };
+
+    window.addEventListener(PLUGIN_EVENTS.INIT_NAVIGATION, handlePluginLoad);
+
+    return () =>
+      window.removeEventListener(
+        PLUGIN_EVENTS.INIT_NAVIGATION,
+        handlePluginLoad,
+      );
   }, []);
 
   const navigationItems = useMemo(() => {
@@ -78,12 +116,17 @@ export const AppShell: FC<
           component={navLinkComponent ?? 'a'}
           label={plugin.label}
           rightSection={
-            <AccordionChevron style={{ transform: 'rotate(-90deg)' }} />
+            loadingPlugin ? (
+              <Loader color="blue" size="xs" />
+            ) : (
+              <AccordionChevron style={{ transform: 'rotate(-90deg)' }} />
+            )
           }
         />
       );
     });
   }, [
+    loadingPlugin,
     navLinkComponent,
     pluginNavigation?.items,
     pluginNavigation?.pluginId,

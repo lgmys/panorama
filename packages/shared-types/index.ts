@@ -16,4 +16,6 @@ export interface PluginNavigate {
 export const PLUGIN_EVENTS = {
   INIT_NAVIGATION: 'plugin:initNavigation',
   NAVIGATE: 'plugin:navigate',
+  UNLOAD: 'plugin:unload',
+  LOADING: 'plugin:loading',
 };

@@ -45,6 +45,7 @@ const PluginRoot = () => {
     }
 
     if (!loadedRef.current) {
+      window.dispatchEvent(new CustomEvent(PLUGIN_EVENTS.LOADING));
       loadPlugin(params.pluginId);
       loadedRef.current = true;
     }
@@ -53,6 +54,7 @@ const PluginRoot = () => {
       if ((window as any).pluginRoot) {
         console.log('removing plugin from the DOM');
         (window as any).pluginRoot.unmount();
+        window.dispatchEvent(new CustomEvent(PLUGIN_EVENTS.UNLOAD));
       }
     };
   }, [params.pluginId]);
