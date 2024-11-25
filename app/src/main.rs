@@ -126,12 +126,10 @@ async fn monitor_process(process_path: String, socket_path: String) {
                     eprintln!("Error restarting backend process: {:?}", err);
                 }
             }
-
-            // FIXME: load plugin server manifest using the endpoint
         }
 
         // Sleep for a while before checking again
-        sleep(Duration::from_secs(5)).await;
+        sleep(Duration::from_secs(2)).await;
     }
 }
 
@@ -163,6 +161,17 @@ async fn restart_backend_process(
     match Command::new(process_path).arg(socket_path).spawn() {
         Ok(process) => {
             println!("Backend process restarted, pid: {}", process.id().unwrap());
+
+            sleep(Duration::from_secs(5)).await;
+
+            let manifest = fetch_data_from_plugin(socket_path, "/manifest")
+                .await
+                .unwrap();
+
+            println!("Plugin manifest read: {}", manifest);
+
+            // FIXME: store this somewhere, in loaded plugins struct or something
+
             Ok(process)
         }
         Err(err) => Err((
