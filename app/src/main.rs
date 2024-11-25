@@ -256,12 +256,7 @@ async fn proxy_to_backend(
     Path((plugin_id, rest)): Path<(String, String)>,
 ) -> Result<Json<Value>, (hyper::StatusCode, String)> {
     let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
-    let mut target_path = rest;
-    if target_path.chars().count() == 0 {
-        target_path = "/".into()
-    }
-
-    println!("target path {}", &target_path);
+    let target_path = rest;
 
     let res =
         fetch_data_from_plugin(&plugin_config.socket_path, &format!("/{}", &target_path)).await;
