@@ -4,12 +4,11 @@ use axum::{
     Json, Router,
 };
 use bytes::Bytes;
-use futures::{future, StreamExt};
+use futures::future;
 use http_body_util::{BodyExt, Empty};
 use hyper::client::conn;
 use hyper::Request;
 use hyper_util::rt::TokioIo;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::HashMap,
@@ -23,30 +22,9 @@ use tokio::{
     task,
     time::sleep,
 };
+use types::{AppState, LoadedPluginsRegistry, Manifest, PanoramaConfig};
 
-type LoadedPluginsRegistry = Arc<Mutex<HashMap<String, Manifest>>>;
-
-#[derive(Deserialize, Clone, Debug)]
-struct Plugin {
-    pub binary_path: String,
-    pub socket_path: String,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-struct PanoramaConfig {
-    pub plugins: HashMap<String, Plugin>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-struct Manifest {
-    pub id: String,
-}
-
-#[derive(Clone)]
-struct AppState {
-    pub config: Arc<PanoramaConfig>,
-    pub loaded_plugins: Arc<Mutex<HashMap<String, Manifest>>>,
-}
+mod types;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
