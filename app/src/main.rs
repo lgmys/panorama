@@ -24,6 +24,8 @@ use tokio::{
     time::sleep,
 };
 
+type LoadedPluginsRegistry = Arc<Mutex<HashMap<String, Manifest>>>;
+
 #[derive(Deserialize, Clone, Debug)]
 struct Plugin {
     pub binary_path: String,
@@ -85,10 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn run_axum_server(
-    config: Arc<PanoramaConfig>,
-    loaded_plugins: Arc<Mutex<HashMap<String, Manifest>>>,
-) {
+async fn run_axum_server(config: Arc<PanoramaConfig>, loaded_plugins: LoadedPluginsRegistry) {
     let app = Router::new()
         .route("/api/plugins", get(get_plugin_status))
         .route("/api/plugin/:plugin_id/*rest", get(proxy_to_backend))
@@ -103,7 +102,7 @@ async fn run_axum_server(
 }
 
 async fn monitor_process(
-    loaded_plugins: Arc<Mutex<HashMap<String, Manifest>>>,
+    loaded_plugins: LoadedPluginsRegistry,
     process_path: String,
     socket_path: String,
 ) {
@@ -169,7 +168,7 @@ async fn get_last_modified(path: &str) -> Option<SystemTime> {
 
 // Helper function to restart the backend process
 async fn restart_backend_process(
-    loaded_plugins: Arc<Mutex<HashMap<String, Manifest>>>,
+    loaded_plugins: LoadedPluginsRegistry,
     process_path: &str,
     socket_path: &str,
 ) -> Result<Child, (hyper::StatusCode, String)> {
