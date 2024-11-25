@@ -36,7 +36,7 @@ async fn main() {
 
     let uds = UnixListener::bind(path.clone()).unwrap();
 
-    let app = Router::new().route("/", get(handler)).route(
+    let app = Router::new().route("/info", get(handler)).route(
         "/manifest",
         get(|| async move {
             let manifest = Manifest {
@@ -67,6 +67,10 @@ async fn main() {
                 .serve_connection_with_upgrades(socket, hyper_service)
                 .await
             {
+                if err.to_string().contains("error shutting down") {
+                    return;
+                }
+
                 eprintln!("failed to serve connection: {err:#}");
             }
         });
