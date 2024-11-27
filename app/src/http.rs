@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Request, State},
     routing::get,
     Json, Router,
 };
-use hyper::Request;
 use serde_json::Value;
 
 use crate::{
@@ -37,13 +36,14 @@ pub async fn get_plugin_status(State(state): State<AppState>) -> Json<Value> {
 pub async fn proxy_to_plugin(
     State(state): State<AppState>,
     Path((plugin_id, rest)): Path<(String, String)>,
+    request: Request,
 ) -> Result<Json<Value>, (hyper::StatusCode, String)> {
     let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
     let target_path = rest;
 
     let req = Request::builder()
         .uri(format!("/{}", &target_path))
-        .method("GET")
+        .method(request.method())
         .body("".to_string())
         .unwrap();
 
