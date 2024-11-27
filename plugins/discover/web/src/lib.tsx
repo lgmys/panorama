@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { Router } from './App';
 import { dispatchNavEvent } from './pluginNav';
-import { PluginStartupConfig } from './types';
+import { PluginStartupConfig } from '@panorama/shared-types';
 
 export const createRouter = (
   container: HTMLElement,

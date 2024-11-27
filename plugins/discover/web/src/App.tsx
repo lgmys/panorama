@@ -8,8 +8,11 @@ import {
   Routes,
   useNavigate,
 } from 'react-router';
-import { PLUGIN_EVENTS, PluginNavigate } from '@panorama/shared-types';
-import { PluginStartupConfig } from './types';
+import {
+  PLUGIN_EVENTS,
+  PluginNavigate,
+  PluginStartupConfig,
+} from '@panorama/shared-types';
 
 export interface RouterProps {
   config: PluginStartupConfig;

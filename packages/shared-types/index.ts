@@ -19,3 +19,12 @@ export const PLUGIN_EVENTS = {
   UNLOAD: 'plugin:unload',
   LOADING: 'plugin:loading',
 };
+
+export interface PluginStartupConfig {
+  pluginId: string;
+  basename: string;
+  /**
+   * Started as a plugin
+   */
+  nested?: boolean;
+}

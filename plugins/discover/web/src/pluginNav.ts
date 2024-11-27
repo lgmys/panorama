@@ -1,5 +1,8 @@
-import { PLUGIN_EVENTS, PluginNavigationInit } from '@panorama/shared-types';
-import { PluginStartupConfig } from './types';
+import {
+  PLUGIN_EVENTS,
+  PluginNavigationInit,
+  PluginStartupConfig,
+} from '@panorama/shared-types';
 
 export const pluginNav: PluginNavigationInit = {
   pluginId: 'discover',
