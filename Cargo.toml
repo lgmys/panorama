@@ -1,2 +1,2 @@
 [workspace]
-members = ["app", "plugins/discover"]
+members = ["app", "plugins/discover", "crates/*"]

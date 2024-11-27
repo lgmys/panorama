@@ -2,7 +2,7 @@ use std::env;
 
 use axum::{http::Request, routing::get, Json, Router};
 use hyper::body::Incoming;
-use serde::Serialize;
+use plugin_shared::{Datasource, Manifest};
 use std::path::PathBuf;
 use tokio::net::UnixListener;
 use tower::Service;
@@ -11,18 +11,6 @@ use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server,
 };
-
-#[derive(Serialize)]
-pub struct Datasource {
-    pub id: String,
-}
-
-#[derive(Serialize)]
-pub struct Manifest {
-    pub id: String,
-    pub version: String,
-    pub exported_datasources: Vec<Datasource>,
-}
 
 #[tokio::main]
 async fn main() {
