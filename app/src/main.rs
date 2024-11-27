@@ -1,5 +1,5 @@
 use futures::future;
-use http::run_axum_server;
+use http::start_http_server;
 use plugins::watch_plugin;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{fs, sync::Mutex, task};
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         plugin_tasks.push(task);
     }
 
-    let server_task = run_axum_server(Arc::new(config.clone()), loaded_plugins.clone());
+    let server_task = start_http_server(Arc::new(config.clone()), loaded_plugins.clone());
 
     tokio::select! {
         _ = future::select_all(plugin_tasks) => {

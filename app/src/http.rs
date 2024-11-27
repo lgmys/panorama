@@ -13,7 +13,7 @@ use crate::{
     types::{AppState, LoadedPluginsRegistry, PanoramaConfig},
 };
 
-pub async fn run_axum_server(config: Arc<PanoramaConfig>, loaded_plugins: LoadedPluginsRegistry) {
+pub async fn start_http_server(config: Arc<PanoramaConfig>, loaded_plugins: LoadedPluginsRegistry) {
     let app = Router::new()
         .route("/api/plugins", get(get_plugin_status))
         .route("/api/plugin/:plugin_id/*rest", get(proxy_to_plugin))
