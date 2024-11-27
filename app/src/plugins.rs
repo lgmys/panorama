@@ -1,5 +1,6 @@
 use std::time::{Duration, SystemTime};
 
+use hyper::Method;
 use tokio::{
     fs,
     process::{Child, Command},
@@ -7,11 +8,11 @@ use tokio::{
 };
 
 use crate::{
-    ipc::fetch_data_from_plugin,
+    ipc::{plugin_request, PluginRequest},
     types::{LoadedPluginsRegistry, Manifest},
 };
 
-pub async fn monitor_process(
+pub async fn watch_plugin(
     loaded_plugins: LoadedPluginsRegistry,
     process_path: String,
     socket_path: String,
@@ -97,9 +98,16 @@ pub async fn restart_backend_process(
 
             sleep(Duration::from_secs(5)).await;
 
-            let manifest = fetch_data_from_plugin(socket_path, "/manifest")
-                .await
-                .unwrap();
+            let manifest = plugin_request(
+                socket_path,
+                PluginRequest {
+                    method: Method::GET,
+                    uri: "/manifest".to_string(),
+                    value: None,
+                },
+            )
+            .await
+            .unwrap();
 
             if let Ok(manifest) = serde_json::from_str::<Manifest>(&manifest) {
                 println!("Plugin manifest read: {:?}", &manifest);

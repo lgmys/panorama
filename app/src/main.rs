@@ -1,6 +1,6 @@
 use futures::future;
 use http::run_axum_server;
-use plugins::monitor_process;
+use plugins::watch_plugin;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{fs, sync::Mutex, task};
 use types::{Manifest, PanoramaConfig};
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let loaded_plugins = loaded_plugins.clone();
 
         let task = task::spawn(async move {
-            monitor_process(
+            watch_plugin(
                 loaded_plugins,
                 plugin_config.binary_path.clone(),
                 plugin_config.socket_path.clone(),

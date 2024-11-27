@@ -5,17 +5,18 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use hyper::Method;
 use serde_json::Value;
 
 use crate::{
-    ipc::fetch_data_from_plugin,
+    ipc::{plugin_request, PluginRequest},
     types::{AppState, LoadedPluginsRegistry, PanoramaConfig},
 };
 
 pub async fn run_axum_server(config: Arc<PanoramaConfig>, loaded_plugins: LoadedPluginsRegistry) {
     let app = Router::new()
         .route("/api/plugins", get(get_plugin_status))
-        .route("/api/plugin/:plugin_id/*rest", get(proxy_to_backend))
+        .route("/api/plugin/:plugin_id/*rest", get(proxy_to_plugin))
         .with_state(AppState {
             config,
             loaded_plugins: loaded_plugins.clone(),
@@ -33,16 +34,22 @@ pub async fn get_plugin_status(State(state): State<AppState>) -> Json<Value> {
     Json(plugins)
 }
 
-// Proxy HTTP requests to the backend process
-pub async fn proxy_to_backend(
+pub async fn proxy_to_plugin(
     State(state): State<AppState>,
     Path((plugin_id, rest)): Path<(String, String)>,
 ) -> Result<Json<Value>, (hyper::StatusCode, String)> {
     let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
     let target_path = rest;
 
-    let res =
-        fetch_data_from_plugin(&plugin_config.socket_path, &format!("/{}", &target_path)).await;
+    let res = plugin_request(
+        &plugin_config.socket_path,
+        PluginRequest {
+            uri: format!("/{}", &target_path),
+            value: None,
+            method: Method::GET,
+        },
+    )
+    .await;
 
     match res {
         Ok(response_string) => Ok(Json(serde_json::from_str(&response_string).unwrap())),

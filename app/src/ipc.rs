@@ -1,10 +1,17 @@
 use bytes::Bytes;
 use http_body_util::{BodyExt, Empty};
-use hyper::{client::conn, Request};
+use hyper::{client::conn, Method, Request};
 use hyper_util::rt::TokioIo;
+use serde_json::Value;
 
-pub async fn fetch_data_from_plugin(socket_path: &str, uri: &str) -> Result<String, ()> {
-    println!("Fetching data from {}", uri);
+pub struct PluginRequest {
+    pub method: Method,
+    pub uri: String,
+    pub value: Option<Value>,
+}
+
+pub async fn plugin_request(socket_path: &str, req: PluginRequest) -> Result<String, ()> {
+    println!("Fetching data from {}", &req.uri);
 
     let stream = tokio::net::UnixStream::connect(socket_path)
         .await
@@ -21,8 +28,8 @@ pub async fn fetch_data_from_plugin(socket_path: &str, uri: &str) -> Result<Stri
     });
 
     let request = Request::builder()
-        .method("GET")
-        .uri(uri)
+        .method(&req.method)
+        .uri(&req.uri)
         .body(Empty::<Bytes>::new())
         .unwrap();
 
