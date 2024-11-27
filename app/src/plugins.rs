@@ -1,5 +1,6 @@
 use std::time::{Duration, SystemTime};
 
+use axum::extract::Request;
 use hyper::Method;
 use tokio::{
     fs,
@@ -8,7 +9,7 @@ use tokio::{
 };
 
 use crate::{
-    ipc::{plugin_request, PluginRequest},
+    ipc::plugin_request,
     types::{LoadedPluginsRegistry, Manifest},
 };
 
@@ -98,16 +99,13 @@ pub async fn restart_backend_process(
 
             sleep(Duration::from_secs(5)).await;
 
-            let manifest = plugin_request(
-                socket_path,
-                PluginRequest {
-                    method: Method::GET,
-                    uri: "/manifest".to_string(),
-                    value: None,
-                },
-            )
-            .await
-            .unwrap();
+            let req = Request::builder()
+                .uri("/manifest")
+                .method("GET")
+                .body("".to_string())
+                .unwrap();
+
+            let manifest = plugin_request(socket_path, req).await.unwrap();
 
             if let Ok(manifest) = serde_json::from_str::<Manifest>(&manifest) {
                 println!("Plugin manifest read: {:?}", &manifest);

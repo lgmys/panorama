@@ -1,18 +1,8 @@
-use bytes::Bytes;
-use http_body_util::{BodyExt, Empty};
-use hyper::{client::conn, Method, Request};
+use http_body_util::BodyExt;
+use hyper::{client::conn, Request};
 use hyper_util::rt::TokioIo;
-use serde_json::Value;
 
-pub struct PluginRequest {
-    pub method: Method,
-    pub uri: String,
-    pub value: Option<Value>,
-}
-
-pub async fn plugin_request(socket_path: &str, req: PluginRequest) -> Result<String, ()> {
-    println!("Fetching data from {}", &req.uri);
-
+pub async fn plugin_request(socket_path: &str, req: Request<String>) -> Result<String, ()> {
     let stream = tokio::net::UnixStream::connect(socket_path)
         .await
         .expect("Failed to connect to server");
@@ -27,13 +17,7 @@ pub async fn plugin_request(socket_path: &str, req: PluginRequest) -> Result<Str
         }
     });
 
-    let request = Request::builder()
-        .method(&req.method)
-        .uri(&req.uri)
-        .body(Empty::<Bytes>::new())
-        .unwrap();
-
-    let res = request_sender.send_request(request).await.unwrap();
+    let res = request_sender.send_request(req).await.unwrap();
     let body = res.collect().await.unwrap().to_bytes();
     let string = String::from_utf8_lossy(&body);
 

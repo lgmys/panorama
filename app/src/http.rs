@@ -5,11 +5,11 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use hyper::Method;
+use hyper::Request;
 use serde_json::Value;
 
 use crate::{
-    ipc::{plugin_request, PluginRequest},
+    ipc::plugin_request,
     types::{AppState, LoadedPluginsRegistry, PanoramaConfig},
 };
 
@@ -41,15 +41,13 @@ pub async fn proxy_to_plugin(
     let plugin_config = state.config.plugins.get(&plugin_id).unwrap();
     let target_path = rest;
 
-    let res = plugin_request(
-        &plugin_config.socket_path,
-        PluginRequest {
-            uri: format!("/{}", &target_path),
-            value: None,
-            method: Method::GET,
-        },
-    )
-    .await;
+    let req = Request::builder()
+        .uri(format!("/{}", &target_path))
+        .method("GET")
+        .body("".to_string())
+        .unwrap();
+
+    let res = plugin_request(&plugin_config.socket_path, req).await;
 
     match res {
         Ok(response_string) => Ok(Json(serde_json::from_str(&response_string).unwrap())),
