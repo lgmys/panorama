@@ -2,7 +2,7 @@ use core::panic;
 use std::sync::Arc;
 
 use axum::{
-    extract::{Query, State},
+    extract::State,
     routing::{get, post},
     Json, Router,
 };
@@ -88,9 +88,14 @@ async fn manifest_handler() -> Json<Manifest> {
     Json(manifest)
 }
 
+// NOTE: this would be wrapped with {datasource: { id: string, kind: string }, query: BELOW_TYPE}
+
 #[derive(Deserialize)]
 pub struct QueryParams {
     pub collection: String,
+    pub filter: Option<String>,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
 }
 
 async fn datasource_handler_query(
