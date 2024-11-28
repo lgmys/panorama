@@ -1,5 +1,3 @@
 ### Get manifest
-GET http://localhost:3000/api/plugin/discover/manifest
+GET http://localhost:3000/api/plugin/discover/meta/manifest
 
-### Get info
-GET http://localhost:3000/api/plugin/discover/info
