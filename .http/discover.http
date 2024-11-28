@@ -2,5 +2,10 @@
 GET http://localhost:3000/api/plugin/discover/meta/manifest
 
 ### Run query against datasource
-GET http://localhost:3000/api/plugin/discover/datasource/elasticsearch/query?dsl=test
+POST http://localhost:3000/api/plugin/discover/datasource/elasticsearch/query
+content-type: application/json
+
+{
+  "collection": "test"
+}
 

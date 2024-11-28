@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Query, State},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use elasticsearch::{cat::CatIndicesParts, http::transport::Transport, Elasticsearch, SearchParts};
@@ -67,7 +67,7 @@ pub async fn create_app() -> Router {
         .route("/meta/manifest", get(manifest_handler))
         .route(
             "/datasource/elasticsearch/query",
-            get(datasource_handler_query),
+            post(datasource_handler_query),
         )
         .with_state(PluginState {
             es_client: Arc::new(Mutex::new(client)),
@@ -90,19 +90,17 @@ async fn manifest_handler() -> Json<Manifest> {
 
 #[derive(Deserialize)]
 pub struct QueryParams {
-    pub dsl: String,
+    pub collection: String,
 }
 
 async fn datasource_handler_query(
     State(plugin_state): State<PluginState>,
-    Query(params): Query<QueryParams>,
+    Json(params): Json<QueryParams>,
 ) -> Json<Value> {
-    println!("query dsl {}", params.dsl);
-
     let client = plugin_state.es_client.lock().await;
 
     let response = client
-        .search(SearchParts::Index(&["tweets"]))
+        .search(SearchParts::Index(&[&params.collection]))
         .from(0)
         .size(10)
         .body(json!({
