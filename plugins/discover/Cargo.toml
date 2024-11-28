@@ -5,13 +5,9 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.9"
-hyper = { version = "1.5.0", features = ["server"] }
-hyper-util = "0.1.10"
-hyperlocal = "0.9.1"
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
 tokio = { version = "1.41.1", features = ["full"] }
 toml = "0.8.19"
-tower = "0.5.1"
 plugin_shared = {path = '../../crates/plugin_shared'}
 

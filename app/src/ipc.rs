@@ -1,8 +1,15 @@
+use std::error::Error as StdError;
+
 use http_body_util::BodyExt;
-use hyper::{client::conn, Request};
+use hyper::{body::Body, client::conn, Request};
 use hyper_util::rt::TokioIo;
 
-pub async fn plugin_request(socket_path: &str, req: Request<String>) -> Result<String, ()> {
+pub async fn plugin_request<B>(socket_path: &str, req: Request<B>) -> Result<String, ()>
+where
+    B: Body + Send + 'static,
+    B::Data: Send,
+    B::Error: Into<Box<dyn StdError + Send + Sync>>,
+{
     let stream = tokio::net::UnixStream::connect(socket_path)
         .await
         .expect("Failed to connect to server");
@@ -10,7 +17,6 @@ pub async fn plugin_request(socket_path: &str, req: Request<String>) -> Result<S
 
     let (mut request_sender, connection) = conn::http1::handshake(io).await.unwrap();
 
-    // spawn a task to poll the connection and drive the HTTP state
     tokio::spawn(async move {
         if let Err(e) = connection.await {
             eprintln!("Error in connection: {}", e);

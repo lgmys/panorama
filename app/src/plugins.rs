@@ -1,7 +1,9 @@
 use std::time::{Duration, SystemTime};
 
 use axum::extract::Request;
-use hyper::Method;
+use bytes::Bytes;
+use http_body_util::Empty;
+use hyper::{body::Body, Method};
 use tokio::{
     fs,
     process::{Child, Command},
@@ -102,7 +104,7 @@ pub async fn restart_backend_process(
             let req = Request::builder()
                 .uri("/manifest")
                 .method("GET")
-                .body("".to_string())
+                .body(Empty::<Bytes>::new())
                 .unwrap();
 
             let manifest = plugin_request(socket_path, req).await.unwrap();
