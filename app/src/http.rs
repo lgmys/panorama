@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Request, State},
-    routing::get,
+    routing::{any, get},
     Json, Router,
 };
 use serde_json::Value;
@@ -15,7 +15,7 @@ use crate::{
 pub async fn start_http_server(config: Arc<PanoramaConfig>, loaded_plugins: LoadedPluginsRegistry) {
     let app = Router::new()
         .route("/api/plugins", get(get_plugin_status))
-        .route("/api/plugin/:plugin_id/*rest", get(proxy_to_plugin))
+        .route("/api/plugin/:plugin_id/*rest", any(proxy_to_plugin))
         .with_state(AppState {
             config,
             loaded_plugins: loaded_plugins.clone(),

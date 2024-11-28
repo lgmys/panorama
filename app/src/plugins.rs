@@ -3,7 +3,6 @@ use std::time::{Duration, SystemTime};
 use axum::extract::Request;
 use bytes::Bytes;
 use http_body_util::Empty;
-use hyper::{body::Body, Method};
 use tokio::{
     fs,
     process::{Child, Command},
@@ -102,7 +101,7 @@ pub async fn restart_backend_process(
             sleep(Duration::from_secs(5)).await;
 
             let req = Request::builder()
-                .uri("/manifest")
+                .uri("/meta/manifest")
                 .method("GET")
                 .body(Empty::<Bytes>::new())
                 .unwrap();

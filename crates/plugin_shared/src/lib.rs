@@ -12,7 +12,7 @@ use hyper_util::{
 
 #[derive(Serialize)]
 pub struct Datasource {
-    pub id: String,
+    pub kind: String,
 }
 
 #[derive(Serialize)]
@@ -24,8 +24,8 @@ pub struct Manifest {
 
 pub async fn bootstrap_plugin(socket_path: &str, app: Router) {
     let path = PathBuf::from(socket_path);
-    let uds = UnixListener::bind(path.clone()).unwrap();
     let _ = tokio::fs::remove_file(&path).await;
+    let uds = UnixListener::bind(path.clone()).unwrap();
 
     loop {
         let (socket, _remote_addr) = uds.accept().await.unwrap();
