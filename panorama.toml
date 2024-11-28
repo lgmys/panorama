@@ -2,3 +2,5 @@
 binary_path = "./target/debug/discover"
 socket_path = "/tmp/backend.sock"
 
+secrets = {connection_string = "http://elastic:changeme@localhost:9200"}
+

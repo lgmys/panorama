@@ -1,10 +1,13 @@
 use std::error::Error as StdError;
 
 use http_body_util::BodyExt;
-use hyper::{body::Body, client::conn, Request};
+use hyper::{body::Body, client::conn, Request, StatusCode};
 use hyper_util::rt::TokioIo;
 
-pub async fn plugin_request<B>(socket_path: &str, req: Request<B>) -> Result<String, ()>
+pub async fn plugin_request<B>(
+    socket_path: &str,
+    req: Request<B>,
+) -> Result<(StatusCode, String), ()>
 where
     B: Body + Send + 'static,
     B::Data: Send,
@@ -24,8 +27,10 @@ where
     });
 
     let res = request_sender.send_request(req).await.unwrap();
+    let status = res.status();
+
     let body = res.collect().await.unwrap().to_bytes();
     let string = String::from_utf8_lossy(&body);
 
-    return Ok(string.to_string());
+    return Ok((status, string.to_string()));
 }

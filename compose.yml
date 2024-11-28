@@ -1,0 +1,20 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.16.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - ELASTIC_PASSWORD=changeme
+      - LICENSE=trial
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+      - ./synonyms.txt:/usr/share/elasticsearch/config/synonyms.txt
+
+volumes:
+  esdata:

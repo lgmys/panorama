@@ -106,7 +106,7 @@ pub async fn restart_backend_process(
                 .body(Empty::<Bytes>::new())
                 .unwrap();
 
-            let manifest = plugin_request(socket_path, req).await.unwrap();
+            let (_, manifest) = plugin_request(socket_path, req).await.unwrap();
 
             if let Ok(manifest) = serde_json::from_str::<Manifest>(&manifest) {
                 println!("Plugin manifest read: {:?}", &manifest);

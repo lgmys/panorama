@@ -5,13 +5,14 @@ use tokio::sync::Mutex;
 
 pub type LoadedPluginsRegistry = Arc<Mutex<HashMap<String, Manifest>>>;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Plugin {
     pub binary_path: String,
     pub socket_path: String,
+    pub secrets: Option<HashMap<String, String>>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Serialize, Debug)]
 pub struct PanoramaConfig {
     pub plugins: HashMap<String, Plugin>,
 }

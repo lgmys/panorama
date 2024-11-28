@@ -1,24 +1,82 @@
-use axum::{routing::get, Json, Router};
+use core::panic;
+use std::sync::Arc;
+
+use axum::{
+    extract::{Query, State},
+    routing::get,
+    Json, Router,
+};
+use elasticsearch::{cat::CatIndicesParts, http::transport::Transport, Elasticsearch, SearchParts};
 use plugin_shared::{Datasource, Manifest};
-use serde_json::Value;
+use serde::Deserialize;
+use serde_json::{json, Value};
+use tokio::sync::Mutex;
 
-pub async fn create_app() -> Router {
-    let app = Router::new().route("/meta/manifest", get(handler));
-
-    return app;
+#[derive(Deserialize, Debug)]
+pub struct DiscoverSecrets {
+    pub connection_string: String,
 }
 
-async fn handler() -> Json<Manifest> {
+#[derive(Deserialize, Debug)]
+pub struct DiscoverConfig {
+    pub secrets: DiscoverSecrets,
+}
+
+#[derive(Clone)]
+pub struct PluginState {
+    pub es_client: Arc<Mutex<Elasticsearch>>,
+}
+
+pub async fn create_app() -> Router {
     // request back to the host app
-    let resp = reqwest::get("http://localhost:3000/api/plugins")
+    let config = reqwest::get("http://localhost:3000/api/config")
         .await
         .unwrap()
         .json::<Value>()
         .await
         .unwrap();
 
-    println!("fetching data from parent app:\n{resp:#?}");
+    let config = config
+        .get("plugins")
+        .unwrap()
+        .get("discover")
+        .unwrap()
+        .clone();
 
+    let config: DiscoverConfig = serde_json::from_value(config).unwrap();
+
+    println!("plugin config:\n{config:#?}");
+
+    let transport = Transport::single_node(&config.secrets.connection_string).unwrap();
+
+    let client = Elasticsearch::new(transport);
+
+    let response = client
+        .cat()
+        .indices(CatIndicesParts::Index(&["*"]))
+        .format("json")
+        .send()
+        .await
+        .unwrap();
+
+    if response.status_code() != 200 {
+        panic!("could not connect to elasticsearch");
+    }
+
+    let app = Router::new()
+        .route("/meta/manifest", get(manifest_handler))
+        .route(
+            "/datasource/elasticsearch/query",
+            get(datasource_handler_query),
+        )
+        .with_state(PluginState {
+            es_client: Arc::new(Mutex::new(client)),
+        });
+
+    return app;
+}
+
+async fn manifest_handler() -> Json<Manifest> {
     let manifest = Manifest {
         id: "discover".to_string(),
         version: "0.0.1".to_string(),
@@ -28,4 +86,37 @@ async fn handler() -> Json<Manifest> {
     };
 
     Json(manifest)
+}
+
+#[derive(Deserialize)]
+pub struct QueryParams {
+    pub dsl: String,
+}
+
+async fn datasource_handler_query(
+    State(plugin_state): State<PluginState>,
+    Query(params): Query<QueryParams>,
+) -> Json<Value> {
+    println!("query dsl {}", params.dsl);
+
+    let client = plugin_state.es_client.lock().await;
+
+    let response = client
+        .search(SearchParts::Index(&["tweets"]))
+        .from(0)
+        .size(10)
+        .body(json!({
+            "query": {
+                "match": {
+                    "message": "Elasticsearch rust"
+                }
+            }
+        }))
+        .send()
+        .await
+        .unwrap();
+
+    let response_body = response.json::<Value>().await.unwrap();
+
+    Json(response_body)
 }
