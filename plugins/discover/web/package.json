@@ -16,11 +16,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@panorama/atoms": "workspace:*",
+    "@panorama/shared-types": "workspace:*",
+    "@reduxjs/toolkit": "^2.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router": "^7.0.0",
-    "@panorama/atoms": "workspace:*",
-    "@panorama/shared-types": "workspace:*"
+    "react-redux": "^9.1.2",
+    "react-router": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

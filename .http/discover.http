@@ -6,6 +6,6 @@ POST http://localhost:3000/api/plugin/discover/datasource/elasticsearch/query
 content-type: application/json
 
 {
-  "collection": "test"
+  "collection": "my_index"
 }
 

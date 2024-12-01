@@ -63,6 +63,8 @@ pub async fn create_app() -> Router {
         panic!("could not connect to elasticsearch");
     }
 
+    // FIXME: add endpoints for available collections
+    // FIXME: add endpoints for available fields
     let app = Router::new()
         .route("/meta/manifest", get(manifest_handler))
         .route(
@@ -89,8 +91,7 @@ async fn manifest_handler() -> Json<Manifest> {
 }
 
 // NOTE: this would be wrapped with {datasource: { id: string, kind: string }, query: BELOW_TYPE}
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct QueryParams {
     pub collection: String,
     pub filter: Option<String>,
@@ -111,7 +112,7 @@ async fn datasource_handler_query(
         .body(json!({
             "query": {
                 "match": {
-                    "message": "Elasticsearch rust"
+                    "name": "John Doe"
                 }
             }
         }))

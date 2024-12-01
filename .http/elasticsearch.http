@@ -1,0 +1,28 @@
+### Create index
+PUT "http://localhost:9200/my_index"
+
+### Get mappings
+GET "http://localhost:9200/my_index/_mapping"
+
+### Insert document
+POST "http://localhost:9200/my_index/_doc/"
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "age": 30,
+  "email": "john.doe@example.com",
+  "created_at": "2024-12-01T12:00:00Z"
+}
+
+### Search index
+POST "http://localhost:9200/my_index/_search"
+Content-Type: application/json
+
+{
+  "query": {
+      "match": {
+          "name": "John Doe"
+        }
+    }
+}

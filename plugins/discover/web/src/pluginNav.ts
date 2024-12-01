@@ -12,8 +12,8 @@ export const pluginNav: PluginNavigationInit = {
       to: '/',
     },
     {
-      label: 'Test',
-      to: '/test',
+      label: 'Browse',
+      to: '/browse',
     },
   ],
 };
